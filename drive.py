@@ -11,7 +11,7 @@ import eventlet.wsgi
 from PIL import Image
 from flask import Flask
 from io import BytesIO
-
+import tensorflow as tf
 from keras.models import load_model
 import h5py
 from keras import __version__ as keras_version
@@ -50,6 +50,8 @@ controller.set_desired(set_speed)
 
 @sio.on('telemetry')
 def telemetry(sid, data):
+    weight = 0.0
+    last_steering_angle = -1000.0
     if data:
         # The current steering angle of the car
         steering_angle = data["steering_angle"]
@@ -61,10 +63,13 @@ def telemetry(sid, data):
         imgString = data["image"]
         image = Image.open(BytesIO(base64.b64decode(imgString)))
         image_array = np.asarray(image)
-        steering_angle = float(model.predict(image_array[None, :, :, :], batch_size=1))
+        with tf.device('/cpu:0'):
+            steering_angle = float(model.predict(image_array[None, :, :, :], batch_size=1))
 
         throttle = controller.update(float(speed))
-
+        if last_steering_angle != -1000.0:
+            steering_angle = ((last_steering_angle*weight) + steering_angle)/(1.0 + weight)
+        last_steering_angle = steering_angle
         print(steering_angle, throttle)
         send_control(steering_angle, throttle)
 
@@ -118,8 +123,8 @@ if __name__ == '__main__':
     if model_version != keras_version:
         print('You are using Keras version ', keras_version,
               ', but the model was built using ', model_version)
-
-    model = load_model(args.model)
+    with tf.device('/cpu:0'):
+        model = load_model(args.model)
 
     if args.image_folder != '':
         print("Creating image folder at {}".format(args.image_folder))
