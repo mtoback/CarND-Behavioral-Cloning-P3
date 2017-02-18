@@ -43,7 +43,9 @@ Instance ID is 065a62438f56adc9c
 public IP is 54.219.185.59
 '''
 def process_image(img):
+    img = cv2.GaussianBlur(img,(5, 5),0)
     return img
+
 
 def read_data(root_dir):
     car_images = []
@@ -51,7 +53,7 @@ def read_data(root_dir):
     csv_file = "./" + root_dir + "/driving_log.csv"
     # create adjusted steering measurements for the side camera images
     correction = 0.19 # this is a parameter to tune, increased from initial 0.2
-    threshold = 0.8 # only keep 20% of the steering values under +/- 0.15
+    threshold = 0.985 # only keep 10% of the steering values under +/- 0.15
     filter = 0.15 # filter value to remove middle values
     with open(csv_file, 'r') as f:
         reader = csv.reader(f)
@@ -77,23 +79,9 @@ def read_data(root_dir):
                     keep = False
             if keep:
                 steering_angles.append(steering_center)
-                car_images.append(img_center)
-            
-            keep = True
-            if abs(steering_center + correction) < filter:
-                pr_val = np.random.uniform()
-                if pr_val < threshold:
-                    keep = False
-            if keep:
+                car_images.append(img_center)            
                 steering_angles.append(steering_center +  correction)
                 car_images.append(img_left)
-            
-            keep = True
-            if abs(steering_center - correction) < filter:
-                pr_val = np.random.uniform()
-                if pr_val < threshold:
-                    keep = False
-            if keep:
                 steering_angles.append(steering_center - correction)
                 car_images.append(img_right)
     # augment the data so that we get left turn and right turn data equally
@@ -221,14 +209,24 @@ import numpy as np
 import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
 def main():
-    p_dropout = 0.6 # this isn't helping, model is settling with a loss of around 0.1 and should be about a tenth of that
-    p_regularize = 0.05
-    X_train, y_train = shuffle(read_data("IMG_TRAIN3"))
+    p_dropout = 0.5
+    p_regularize = 0.001
+    X_train, y_train = shuffle(read_data("IMG_TRAIN4"))
+    shape_x = X_train.shape
+    shape_y = y_train.shape
+    n, bins, patches = plt.hist(np.asarray(y_train*100), 50, normed=True)
+    
+    plt.xlabel('steering')
+    plt.ylabel('magniture')
+    plt.title(r'Adjusted steering values')
+    plt.grid(True)
+    
+    plt.show()
     X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.2)
     train_generator = generator(X_train, y_train, batch_size=32)
     validation_generator = generator(X_val, y_val, batch_size=32)
     # use letNet model
-    model = simple_mixed_model2(p_dropout)
+    model = nvidia_model(p_dropout, p_regularize)
     # use of optimizers, see https://keras.io/optimizers/
     # according to one student, a learning rate of 0.001 yields
     # smoother turns, where 0.0001 yields sharper turns if your
@@ -236,7 +234,7 @@ def main():
     model.compile(optimizer='adam', loss='mse', lr=0.001)
     model.fit_generator(train_generator, samples_per_epoch=len(X_train), 
             validation_data=validation_generator, 
-            nb_val_samples=len(X_val), nb_epoch=20)    
+            nb_val_samples=len(X_val), nb_epoch=4)
     model.save('model.h5')
 if __name__ == "__main__":
     main()
