@@ -125,7 +125,7 @@ def simple_convolutional_model(p_dropout):
     #crop the top 70 px and bottom 25px to eliminate parts we don't care about
     model.add(Cropping2D(cropping=((70,25),(0,0))))
     model.add(Convolution2D(24,5,5, activation='relu')) # color filter
-    model.add(MaxPooling2D(pool_size=(2,2))) # 2,2 causes the model to fail on negative dimension value
+    model.add(MaxPooling2D(pool_size=(2,2))) 
     model.add(Dropout(p_dropout))
     model.add(Convolution2D(36,5,5, activation='relu')) # color filter
     model.add(MaxPooling2D(pool_size=(2,2))) # 2,2 causes the model to fail on negative dimension value

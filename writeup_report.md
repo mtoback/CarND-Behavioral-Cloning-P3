@@ -1,12 +1,7 @@
 #**Behavioral Cloning** 
-
-##Writeup Template
-
-###You can use this file as a template for your writeup if you want to submit it as a markdown file, but feel free to use some other method and submit a pdf if you prefer.
-
 ---
 
-**Behavrioal Cloning Project**
+**Behavioral Cloning Project**
 
 The goals / steps of this project are the following:
 * Use the simulator to collect data of good driving behavior
@@ -37,6 +32,7 @@ The goals / steps of this project are the following:
 My project includes the following files:
 * model.py containing the script to create and train the model
 * drive.py for driving the car in autonomous mode
+* run.bat for controlling the model.py file
 * model.h5 containing a trained convolution neural network 
 * writeup_report.md or writeup_report.pdf summarizing the results
 
@@ -48,38 +44,65 @@ python drive.py model.h5
 
 ####3. Submssion code is usable and readable
 
-The model.py file contains the code for training and saving the convolution neural network. The file shows the pipeline I used for training and validating the model, and it contains comments to explain how the code works.
+The model.py file contains the code for training and saving the convolution neural network. The file shows the pipeline I used for training and validating the model, and it contains comments to explain how the code works. 
+
+The code was built with flexibility in mind, the code flexibly supports the following models and can be expanded further with a little effort:
+* simple_model - single layer model using Flatten layer followed by a Dense(1) layer (single output)
+* simple_model_with_normalization_and_cropping - Same as simple model, add cropping to remove the upper portion of the input images
+* simple_convolutional_model - same as simple model with a convolution2D layer inserted before the flatten layer. The convolution layer is identical to the first convolution layer of the nvidia model referenced below, except that a pooling and parameterized dropout layer is added as well
+* simple_convolutional_model2 - Same as the simple convolution model, with a second convolution layer added. The second layer is identical to the second layer in the nvidia model referenced below, except that a pooling and parameterized dropout layer is added as well
+* simple_mixed_model - Same as simple convolution model except that a Dense layer equal to the first dense layer of the nvidia model referenced below
+* simple_mixed_model2 - same as the second convolutional model, except that a Dense layer equal to the first dense layer of the nvidia model referenced below
+* simple_mixed_model3 - same as the first simple mixed model, except that a second dense layer equal to the second dense layer in the nvidia model referenced below
+* leNet - An implementation of the leNet Model
+* nvidia_model - An implementation of the nvidia autonomous car model. See https://devblogs.nvidia.com/parallelforall/deep-learning-self-driving-cars/
 
 ###Model Architecture and Training Strategy
 
-####1. An appropriate model arcthiecture has been employed
+####1. An appropriate model architecture has been employed
 
-My model consists of a convolution neural network with 3x3 filter sizes and depths between 32 and 128 (model.py lines 18-24) 
+The final model consists of a simple_convolutional_model2 referenced above; a neural network with 24 5x5 filters  (model.py lines 137-147) 
 
-The model includes RELU layers to introduce nonlinearity (code line 20), and the data is normalized in the model using a Keras lambda layer (code line 18). 
+The model includes RELU layers to introduce nonlinearity (model.py line 142), and the data is normalized in the model using a Keras lambda layer (model.py line 124). 
+
+To enable flexibility, the model is run from the following command, where the final command used is delivered in run.bat:
+
+python model.py --model="simple_convolutional_model2" --images="sample_data" --dropout_rate=0.5  --regularize=0.001  --learning_rate=0.0001 --n_epochs=3 --show_hist=True --show_dist=True --correction=0.15 --threshold=0.96 --filter=0.02
+
+where:
+* --model - name of the model from the list referenced above (required)
+* --images - the name of the subdirectory under the current directory containing the collection of images to be used for training and validation. (required)
+* --dropout_rate - the probability (between 0.0 and 1.0) of a given output being passed from the current layer; 1.0 means all, 0.0 means none. (required)
+* --regularize - the value for l2 regularization, see https://keras.io/regularizers/. (Required to be specified as a value between 0.0 and 1.0)
+* --learning_rate - the learning rate associated with the optimizer (passed in, but not used since the [adam](https://keras.io/optimizers/#adam) optimizer is hard-coded in this implementation. (Required to be specified as a value between 0.0 and 1.0)
+* --n_epochs - number of epochs to run, (required as a value between 1 and 1000)
+* --show_hist - If true, display the final history graph (defaults to False, not shown)
+* --show_dist - If true, display a histogram of the input data distribution (defaults to False, not shown)
+* --correction - amount to move the right (positive) or left (negative) image (Required, positive value between 0.0 and 1.0)
+* --filter - a percentage of values with an absolute value to the steering below this value are removed
+* --threshold - amount of data removed from within filter range
 
 ####2. Attempts to reduce overfitting in the model
 
-The model contains dropout layers in order to reduce overfitting (model.py lines 21). 
+The model contains dropout layers in order to reduce overfitting (model.py line 169). 
 
-The model was trained and validated on different data sets to ensure that the model was not overfitting (code line 10-16). The model was tested by running it through the simulator and ensuring that the vehicle could stay on the track.
+The model was trained and validated on different data sets to ensure that the model was not overfitting (model.py line 404). The model was tested by running it through the simulator and ensuring that the vehicle could stay on the track (drive.py)
 
 ####3. Model parameter tuning
 
-The model used an adam optimizer, so the learning rate was not tuned manually (model.py line 25).
+The model used an adam optimizer, so the learning rate was not tuned manually (model.py line 435).
 
 ####4. Appropriate training data
 
 Initially, I used the sample data with some decimation to take care of too many zero steering values.
 
-My own training data was chosen to keep the vehicle driving on the road. I used a combination of center lane driving, recovering from the left and right sides of the road using a joystick for about 3 laps.
-
+My own training data was chosen to keep the vehicle driving on the road. I used a combination of center lane driving, recovering from the left and right sides of the road using a joystick for about 3 laps. However, after several attempts, I was unable to generate a stable output, so stuck with the sample data for this project.
 
 ###Model Architecture and Training Strategy
 
 ####1. Solution Design Approach
 
-The overall strategy for deriving a model architecture was to slowly move up the "ladder" of model complexity. We started with a mse error loss and an adam optimizer with a learning rate of 0.001. 
+The overall strategy for deriving a model architecture was to slowly move up the "ladder" of model complexity. We stayed with a mse error loss and an adam optimizer. 
 
 But... before I did that I needed to clean up the data. The data was normalized using batch normalization (the lambda approach did not work, because of encoding errors). A test run without normalization on the simple model produced a mse on the order of 10^6, where with normalization it dropped to around 10.
 
@@ -134,6 +157,9 @@ The result was a worse value than before and the mse for the validation data see
 
 
 The final step was to run the simulator to see how well the car was driving around track one. There were a few spots where the vehicle fell off the track... to improve the driving behavior in these cases, I reduced the filter to 0.02 and the threshold to 96% and dropout rate to 0.5. 98% worked but resulted in a lot of weaving.
+![final model input distribution][201702201814.png]
+![Final model training][201702201904.png]
+![Final model video][sample_data_final_dampen_out.mp4]
 
 At the end of the process, the vehicle is able to drive autonomously around the track without leaving the road.
 
@@ -155,7 +181,7 @@ I used the sample data for this, as my personal data is not working as well
 
 To augment the data set, I also flipped images and angles thinking that this would allow me to double the amount of data such that if one set of data trains on the right, the flipped images would train on the left and vice versa. I also filtered the data before flipping it by removing about 98% of the points with center steering values between -0.1 and 0.1.
 
-After the collection process, I had 24000 number of data points. After augmentation I have 10000 which includes right and left steering values.
+After the collection process, I had 24000 number of data points. After augmentation and final tuning I have 22000 which includes right and left steering values.
 
 I finally randomly shuffled the data set and put 20% of the data into a validation set. 
 
