@@ -50,7 +50,7 @@ controller.set_desired(set_speed)
 
 @sio.on('telemetry')
 def telemetry(sid, data):
-    weight = 0.0
+    weight = 0.1 # dampens the steering angle changes weighted by the last value
     last_steering_angle = -1000.0
     if data:
         # The current steering angle of the car
