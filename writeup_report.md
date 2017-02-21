@@ -41,6 +41,7 @@ Using the Udacity provided simulator and my drive.py file, the car can be driven
 ```sh
 python drive.py model.h5
 ```
+Drive.py was modified to include a hardcoded weight to dampen the values using a weighted version of the last steering value.
 
 ####3. Submssion code is usable and readable
 
@@ -112,54 +113,54 @@ In order to gauge how well the model was working, I split my image and steering 
 
 To combat the overfitting, I modified the convolutional models so that so that it had a dropout value associated with each convolution layer. I varied these values as I got model results as I will describe below.
 
-![sample data distribution][201702201042.png]
+![sample data distribution](201702201042.png)
 
 I started with a simple model consisting of nothing more than a  Normalization Step, flatten, then an output layer of Dense(1). The results were predictably bad. The MSE was around 6.0 for the validation data after 3 epochs and the car went about 10 feet and drove off the road. Reducing the learning rate by a factor of 10 made it even worse; the validation MSE was constant around 20.
 
-![simple model training][201702201109.png]
+![simple model training](201702201109.png)
 
 Next, I tried adding cropping to the above model. That elminated any changes to the sky from the analysis and hopefully will improve the model response. In fact, the mse dropped to about 1.6 after 3 epochs and continued to drop to 0.86 after 5 epochs. Car just drove right off the road, however.
 
-![simple model with cropping training][201702201147.png]
+![simple model with cropping training](201702201147.png)
 
 Next we tried a simple convolutional model; using 24 5x5 filters (the first layer of the nvidia model), relu activation, max pooling with a 2x2 filter and dropout of 0.7. The learning rate initially is set to 0.001.
 
-![simple convolutional model][201702201203.png]
+![simple convolutional model](201702201203.png)
 
-With this model I achieved a validation mse of about 0.02 fairly constant over 5 epochs. The car drove successfully around the track with no problems except for trying to ride the edge just after the bridge. But it drives contiunously. 
+With this model I achieved a validation mse of about 0.02 fairly constant over 5 epochs. The car drove successfully around the track with no problems except for trying to ride the edge just after the bridge. But it drives continuously. 
 
 I saved this as model.h5.sample_simple_conv
 
-![simple convolutional model][sample_data_simple_conv_out.mp4]
+![simple convolutional model](sample_data_simple_conv_out.mp4)
 
 To see if adding another layer would improve things, I added the second convolutional layer from the nvidia model (36 5x5 filters) with the same parameters as above. Did not seem to have a noticeable effect on the mse, but the issue when it came off the bridge was lessened; it only rode on the side of the ledge after bridge once, as opposed to three or four times with the single layer.
 
 I saved this as model.h5.sample_simple_conv2
 
-![simple convolutional model two layers][201702201256.png]
+![simple convolutional model two layers](201702201256.png)
 
 Next, instead of two layers of convolution, we used a single layer and tried inserting a Dense(100) layer between the Flatten and output Dense(1) layer. This is paralleling the Nvidia model, as this is the first dense layer it has This seemed to perform worse than the first two convolutional models, as it stabilized with an mse of about 0.03. Although the ride was much smoother, once it left the bridge the car seemed to "live" on the edge of the road.
 
-![mixed model one conv one dense][201702201319.png]
+![mixed model one conv one dense](201702201319.png)
 
 Before we give up on this, let's see what happens if we add an l2 regularization value to the new dense layer. We set the l2 value to 0.001. The result was a validation mse decreasing, but barely. And the car crashed into the front of the bridge. So this is definitely worse
 
-![mixed model one conv one dense with regularization][201702201342.png]
+![mixed model one conv one dense with regularization](201702201342.png)
 
 Now let's go back to the best model, which I think is the two layer convolutional model and see if better data will help. We recorded our own data with recovery data:
 
-![simple convolutional model two layers][201702201402.png]
+![simple convolutional model two layers](201702201402.png)
 
 The result was a worse value than before and the mse for the validation data seemed to head downward but bounced around. It drove off the curve before the bridge.
 
-![simple convolutional model two layers][201702201429.png]
-![simple convolutional model two layers][201702201445.png]
+![simple convolutional model two layers](201702201429.png)
+![simple convolutional model two layers](201702201445.png)
 
 
 The final step was to run the simulator to see how well the car was driving around track one. There were a few spots where the vehicle fell off the track... to improve the driving behavior in these cases, I reduced the filter to 0.02 and the threshold to 96% and dropout rate to 0.5. 98% worked but resulted in a lot of weaving.
-![final model input distribution][201702201814.png]
-![Final model training][201702201904.png]
-![Final model video][sample_data_final_dampen_out.mp4]
+![final model input distribution](201702201814.png)
+![Final model training](201702201904.png)
+![Final model video](sample_data_final_dampen_out.mp4)
 
 At the end of the process, the vehicle is able to drive autonomously around the track without leaving the road.
 
@@ -175,6 +176,7 @@ Dropout - keep 70% of the values
 Flatten - Flatten the model out
 Dense - output the single value
 
+The model generated is [here](model.h5)
 ####3. Creation of the Training Set & Training Process
 
 I used the sample data for this, as my personal data is not working as well
